@@ -1,0 +1,19 @@
+ Tk::DBI::DBGrid - grid for browse/edit table (query),
+ this is megawidget, construct from label and entry
+
+ for detail see DBGrid.pod or DBGrid.ru.pod
+
+
+INSTALL
+		perl Makefile.PL
+		make
+		make install
+	Or:
+		copy ./lib/Tk/DBI/* into perl/site/lib/Tk/DBI
+
+COPYRIGHT
+	
+	This program is free software; you can redistribute it and/or modify 
+	it under the same terms as Perl itself.
+
+	Vadim Likhota (Вадим Лихота), vadim-lvv@yandex.ru
