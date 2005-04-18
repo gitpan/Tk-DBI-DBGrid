@@ -33,7 +33,7 @@ Tk::DBI::DBGrid - grid для просмотра и редактирования базы.
      $dbh->do("UPDATE table0 SET  WHERE field0 = $row[0]");
      $dbh->commit;
      ..... # какой-нибудь код после update, если нужно
-     0;    # ноль нужен для будущих реализаций
+     0;  
  };
 
  my $grid = $w->DBGrid( -dbh => $dbh, -sql => $sql, -maxrow => 10, -edit => 1, -pkey => \@pkey, -updfunc => $upd, -font => 'Courier 10' )->pack;
@@ -46,7 +46,8 @@ Tk::DBI::DBGrid - grid для просмотра и редактирования базы.
 
  my @cell;
  $cell[0]{width} = 5;
- $cell[0]{edit} = 0;        # primary key должен быть только для чтения
+ $cell[0]{edit} = 0;        
+ $cell[0]{name} = 'title0'	# заголовок для первой колонки
  $cell[1]{width} = undef;   # считывается длина поля из таблицы
  $cell[1]{edit} = 1;
  $cell[2]{width} = 7;
@@ -60,7 +61,7 @@ Tk::DBI::DBGrid - grid для просмотра и редактирования базы.
      $dbh->do("INSERT INTO table0 (field0, field1, field2) VALUES ($row[0], $row[1], $row[2])");
      $dbh->commit;
      ......
-     0;
+     1;
  };
 
  my $upd = sub {
@@ -81,11 +82,33 @@ Tk::DBI::DBGrid - grid для просмотра и редактирования базы.
      0;
  };
 
- my %fkey;
+ my %fkey;                                                                             *
  $fkey{ins} = 'Key-F5';
  $fkey{del} = 'Key-F8';
+ $fkey{copy} = 'Control-Key-c';
+ $fkey{copy2} = 'Control-Key-C';
+ $fkey{copy3} = 'Control-Insert';
 
- my $grid = $w->DBGrid( -dbh => $dbh, -sql => $sql, -maxrow => 10, -edit => 1, -pkey => \@pkey, -insfunc => $ins, -updfunc => $upd, -delfunc => $del, -font => 'Courier 10', -cellformat =>\@cell, -fkeys => \%fkey )->pack(-fill => 'x');
+ my $encd = sub {
+     return decode('cp1251', $_[0]); # from module Encode
+ };
+
+
+ my $grid = $w->DBGrid( -dbh        => $dbh, 
+                        -sql        => $sql, 
+                        -maxrow     => 10, 
+                        -edit       => 1, 
+                        -pkey       => \@pkey, 
+                        -insfunc    => $ins, 
+                        -updfunc    => $upd, 
+                        -delfunc    => $del, 
+                        -titlbg     => '#f0f0f0', 
+                        -seltitlbg  => 'gray',
+                        -font       => 'Courier 10', 
+                        -cellformat => \@cell, 
+                        -fkeys      => \%fkey, 
+                        -encodes    => $encd 
+ )->pack(-fill => 'x');
 
 =head1 DESCRIPTION
 
@@ -103,7 +126,7 @@ B<DBGrid> позволяет просматривать/редактировать любую таблицу, к которой
 действие не обрабатывается.
 Если в запросе будут найдены ключевые слова групповых операций или UNION,
 то B<DBGrid> будет в режиме просмотра ( аналогично -edit => 0 ).
-На данный момент после вызовов функций отображаемые данные не обновляются.
+После вызовов функций отображаемые данные обновляются если возвращается 1.
 
 =head2 Formating cells
 
@@ -124,8 +147,8 @@ B<DBGrid> позволяет просматривать/редактировать любую таблицу, к которой
 
 =item B<-sql>
 
-Запрос, результат которого отображает B<DBGrig>.
-Результаты запроса заносятся в массив I<$grid-E<gt>{table}-E<gt>{data}-E<gt>[номер_записи][номер_поля]>.
+Запрос, результат которого отображает B<DBGrig>. Результаты запроса 
+заносятся в массив I<$grid-E<gt>{table}-E<gt>{data}-E<gt>[номер_записи][номер_поля]>.
 Нумерация идет с нуля.
 Обязательный параметр.
 
@@ -146,21 +169,33 @@ B<DBGrid> позволяет просматривать/редактировать любую таблицу, к которой
 
 =item B<-incfunc>
 
-Указатель на функцию, которая вызывается для вставки новой строки.
+Указатель на функцию, которая вызывается для вставки новой строки.                 *
 В функцию передается массив, содержащий запись для вставки в таблицу.
 Порядок полей в записи такой же, как в запросе, полученном 
 через B<-sql>. Если функция не определена, новая запись добавлятся не будет.
-Default undef.
+Если функция возвращает 1 (истина), то после ее вызова обновляются данные
+из базы. Default undef.
 
 =item B<-updfunc>
 
-Работает аналогично B<-insfunc>, но с одним отличием: при значении undef
+Работает аналогично B<-insfunc>, но с одним отличием: при значении undef            *
 все равно позволяет изменять значения в ячейках, но эти изменения в базу 
-не передаются. Default undef.
+не передаются. Если в функции данные не модифицируются, то данные в кэше 
+модуля лучше не обновлять (возвращать 0). Default undef.
 
 =item B<-delfunc>
 
 Работает аналогично B<-insfunc>.
+
+=item B<-titlbg>
+
+Цвет фона заголовков полей. Default for windows I<SystemButtonFace>, for           *
+other OS is I<#f0f0f0>.
+
+=item B<-seltitlbg>
+
+Цвет фона заголовка активного поля. По умочанию для windows I<SystemHighlight>, для   *
+остальных I<gray>.
 
 =item B<-font>
 
@@ -175,22 +210,30 @@ Default 'Courier 9'
 I<edit> - доступно ли редактирование данного поля при разрешении редактировании
 всей таблицы, I<justify> - центрирование надписи (I<left>, I<center>, I<right>).
 
-=item B<-fkeys>
+=item B<-fkeys>                                                                     *
 
 Указатель на хэш, в котором будут храниться новые комбаниции клавиш для вставки
-и удаления записей: в поле I<ins>  - вставка новой записи, I<del> - удаление 
-текущей. Если знечение B<-fkeys> не определено, то для вставки начзачается F5, 
-для удаления F8.
+и удаления записей: в поле I<ins> - вставка новой записи, I<del> - удаление 
+текущей, I<copy>, I<copy2>, I<copy3> - копировать запись в буфер обмена. 
+Если знечение B<-fkeys> не определено, то для вставки начзачается F5, для удаления F8,
+для копирования в буфер - Ctrl+C and Ctrl+Ins.
+
+=item B<-encodes>                                                                   *
+
+Указатель на функцию, которая вызывается для перекодирования из кодовой страницы
+базы данных в кодовую страницу графической оболочки, например, в базе используется
+NLS_LANG=CL8MSWIN1251, а Gnome 2.x - UTF8. Если функция не определена, перекодировка
+не производится. Default undef.
 
 =back
 
 =head1 AUTHORS
 
-B<vadim-lvv@yandex.ru>
+Лихота Вадим B<vadim-lvv@yandex.ru>
 
 =head1 KEYWORDS
 
-grid, entry, label, database, table
+dbgrid, entry, label, database, table
 
 
 

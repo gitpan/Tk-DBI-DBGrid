@@ -33,7 +33,7 @@ Tk::DBI::DBGrid - grid for browse and edit database.
      $dbh->do("UPDATE table0 SET  WHERE field0 = $row[0]");
      $dbh->commit;
      ..... # any kod after UPDATE, if need
-     0;    # zero is nnecessary for future реализаций
+     0; 
  };
 
  my $grid = $w->DBGrid( -dbh => $dbh, -sql => $sql, -maxrow => 10, -edit => 1,
@@ -47,7 +47,8 @@ Tk::DBI::DBGrid - grid for browse and edit database.
 
  my @cell;
  $cell[0]{width} = 5;
- $cell[0]{edit} = 0;        # primary key need read only
+ $cell[0]{edit} = 0;       
+ $cell[0]{name} = 'title0'	# new title for field0
  $cell[1]{width} = undef;   # width field read from table 
  $cell[1]{edit} = 1;
  $cell[2]{width} = 7;
@@ -61,7 +62,7 @@ Tk::DBI::DBGrid - grid for browse and edit database.
      $dbh->do("INSERT INTO table0 (field0, field1, field2) VALUES ($row[0], $row[1], $row[2])");
      $dbh->commit;
      ......
-     0;
+     1;
  };
 
  my $upd = sub {
@@ -82,13 +83,33 @@ Tk::DBI::DBGrid - grid for browse and edit database.
      0;
  };
 
- my %fkey;
+ my %fkey;                                                                             *
  $fkey{ins} = 'Key-F5';
  $fkey{del} = 'Key-F8';
+ $fkey{copy} = 'Control-Key-c';
+ $fkey{copy2} = 'Control-Key-C';
+ $fkey{copy3} = 'Control-Insert';
 
- my $grid = $w->DBGrid( -dbh => $dbh, -sql => $sql, -maxrow => 10, -edit => 1,
-     -pkey => \@pkey, -insfunc => $ins, -updfunc => $upd, -delfunc => $del,
-     -font => 'Courier 10', -cellformat =>\@cell, -fkeys => \%fkey )->pack(-fill => 'x');
+ my $encd = sub {
+     return decode('cp1251', $_[0]); # from module Encode
+ };
+
+
+ my $grid = $w->DBGrid( -dbh        => $dbh, 
+                        -sql        => $sql, 
+                        -maxrow     => 10, 
+                        -edit       => 1, 
+                        -pkey       => \@pkey, 
+                        -insfunc    => $ins, 
+                        -updfunc    => $upd, 
+                        -delfunc    => $del, 
+                        -titlbg     => '#f0f0f0', 
+                        -seltitlbg  => 'gray',
+                        -font       => 'Courier 10', 
+                        -cellformat => \@cell, 
+                        -fkeys      => \%fkey, 
+                        -encodes    => $encd 
+ )->pack(-fill => 'x');
 
 =head1 DESCRIPTION
 
